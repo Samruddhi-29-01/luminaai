@@ -80,6 +80,15 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to auto first to get accurate scrollHeight for shrinking
+      textareaRef.current.style.height = 'auto';
+      // Set height strictly to the scrollHeight
+      textareaRef.current.style.height = `${Math.max(400, textareaRef.current.scrollHeight)}px`;
+    }
+  }, [text]);
+
   const saveToHistory = (text: string, summary: string) => {
     const newItem: HistoryItem = {
       id: Math.random().toString(36).substr(2, 9),
@@ -391,13 +400,13 @@ export default function App() {
               </div>
 
               {/* Textarea */}
-              <div className="relative flex-1 p-6">
+              <div className="relative flex-1 p-6 flex flex-col">
                 <textarea
                   ref={textareaRef}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Paste your text here to check for grammar, spelling, and style improvements..."
-                  className="w-full h-full min-h-[400px] resize-none focus:outline-none text-lg leading-relaxed text-slate-700 placeholder:text-slate-300"
+                  className="w-full flex-1 overflow-hidden focus:outline-none text-lg leading-relaxed text-slate-700 placeholder:text-slate-300 transition-[height]"
                 />
               </div>
 
