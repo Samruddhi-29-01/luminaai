@@ -526,9 +526,13 @@ export default function App() {
 
                       {!result && !isAnalyzing && (
                         <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                          <motion.div
+                            animate={{ scale: [1, 1.05, 1] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4"
+                          >
                             <BookOpen className="w-8 h-8 text-slate-300" />
-                          </div>
+                          </motion.div>
                           <p className="text-slate-400 text-sm max-w-[200px]">
                             Enter text and click "Check Grammar" to see suggestions.
                           </p>
