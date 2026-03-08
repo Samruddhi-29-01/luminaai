@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Search, 
-  CheckCircle2, 
-  AlertCircle, 
-  Sparkles, 
-  Copy, 
-  Trash2, 
-  ChevronRight, 
+import {
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  Copy,
+  Trash2,
+  ChevronRight,
   Languages,
   Type as TypeIcon,
   Zap,
@@ -33,6 +33,20 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { checkGrammar } from './services/grammarService';
 import { Suggestion, GrammarCheckResult } from './types';
+import { jsPDF } from 'jspdf';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -80,7 +94,7 @@ export default function App() {
 
   const handleAnalyze = async () => {
     if (!text.trim()) return;
-    
+
     setIsAnalyzing(true);
     setError(null);
     try {
@@ -97,13 +111,13 @@ export default function App() {
 
   const applySuggestion = (suggestion: Suggestion) => {
     if (!result) return;
-    
-    const newText = text.slice(0, suggestion.startIndex) + 
-                    suggestion.replacement + 
-                    text.slice(suggestion.endIndex);
-    
+
+    const newText = text.slice(0, suggestion.startIndex) +
+      suggestion.replacement +
+      text.slice(suggestion.endIndex);
+
     setText(newText);
-    
+
     const diff = suggestion.replacement.length - suggestion.original.length;
     const updatedSuggestions = result.suggestions
       .filter(s => s.id !== suggestion.id)
@@ -122,7 +136,7 @@ export default function App() {
       ...result,
       suggestions: updatedSuggestions
     });
-    
+
     if (activeSuggestionId === suggestion.id) {
       setActiveSuggestionId(null);
     }
@@ -187,7 +201,7 @@ export default function App() {
         <span>{value}%</span>
       </div>
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-        <motion.div 
+        <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${value}%` }}
           className={cn("h-full rounded-full", color)}
@@ -195,6 +209,70 @@ export default function App() {
       </div>
     </div>
   );
+
+  const exportToPDF = () => {
+    if (!result) return;
+    const doc = new jsPDF();
+    doc.setFont("helvetica", "bold");
+    doc.text("Lumina AI - Grammar Report", 10, 10);
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+
+    doc.text(`Tone: ${result.detectedTone}`, 10, 20);
+    doc.text(`Grammar Score: ${result.grammarScore}%`, 10, 30);
+    doc.text(`Readability Score: ${result.analytics.readabilityScore}`, 10, 40);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Original Text:", 10, 50);
+    doc.setFont("helvetica", "normal");
+    const splitOriginal = doc.splitTextToSize(result.originalText, 180);
+    doc.text(splitOriginal, 10, 60);
+
+    let nextY = 60 + (splitOriginal.length * 5) + 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Corrected Text:", 10, nextY);
+    doc.setFont("helvetica", "normal");
+    const splitCorrected = doc.splitTextToSize(result.correctedText, 180);
+    doc.text(splitCorrected, 10, nextY + 10);
+
+    doc.save("lumina-ai-report.pdf");
+  };
+
+  const exportToWord = () => {
+    if (!result) return;
+
+    const content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Lumina AI Report</title></head>
+      <body>
+        <h1>Lumina AI - Grammar Report</h1>
+        <p><strong>Tone:</strong> ${result.detectedTone}</p>
+        <p><strong>Grammar Score:</strong> ${result.grammarScore}%</p>
+        <p><strong>Readability Score:</strong> ${result.analytics.readabilityScore}</p>
+        
+        <h2>Original Text</h2>
+        <p>${result.originalText.replace(/\n/g, '<br>')}</p>
+        
+        <h2>Corrected Text</h2>
+        <p>${result.correctedText.replace(/\n/g, '<br>')}</p>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', content], {
+      type: 'application/msword'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'lumina-ai-report.doc';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-slate-900 font-sans selection:bg-indigo-100">
@@ -208,7 +286,7 @@ export default function App() {
             <h1 className="text-xl font-bold tracking-tight text-slate-800">Lumina <span className="text-indigo-600">AI</span></h1>
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-500">
-            <button 
+            <button
               onClick={() => setShowHistory(!showHistory)}
               className={cn("flex items-center gap-2 transition-colors", showHistory ? "text-indigo-600" : "hover:text-slate-900")}
             >
@@ -232,7 +310,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <AnimatePresence>
           {showHistory && (
-            <motion.div 
+            <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -251,7 +329,7 @@ export default function App() {
                     <p className="text-sm text-slate-400 col-span-full py-4 text-center">No history yet. Start checking your text!</p>
                   ) : (
                     history.map((item) => (
-                      <button 
+                      <button
                         key={item.id}
                         onClick={() => loadFromHistory(item)}
                         className="text-left p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group"
@@ -272,7 +350,7 @@ export default function App() {
         </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Editor Section */}
           <div className="lg:col-span-8 space-y-4">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[550px]">
@@ -281,27 +359,28 @@ export default function App() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tone:</span>
-                    <select 
-                      value={tone}
-                      onChange={(e) => setTone(e.target.value)}
-                      className="text-sm bg-white border border-slate-200 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    >
-                      <option>Professional</option>
-                      <option>Casual</option>
-                      <option>Academic</option>
-                      <option>Creative</option>
-                    </select>
+                    <Select value={tone} onValueChange={setTone}>
+                      <SelectTrigger className="w-[130px] h-8 bg-white border-slate-200">
+                        <SelectValue placeholder="Tone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Professional">Professional</SelectItem>
+                        <SelectItem value="Casual">Casual</SelectItem>
+                        <SelectItem value="Academic">Academic</SelectItem>
+                        <SelectItem value="Creative">Creative</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={handleClear}
                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                     title="Clear text"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={handleCopy}
                     className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                     title="Copy to clipboard"
@@ -339,8 +418,8 @@ export default function App() {
                   disabled={isAnalyzing || !text.trim()}
                   className={cn(
                     "flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold transition-all shadow-md",
-                    isAnalyzing || !text.trim() 
-                      ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                    isAnalyzing || !text.trim()
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                       : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-200 active:scale-95"
                   )}
                 >
@@ -372,34 +451,34 @@ export default function App() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full min-h-[550px]">
               {/* Tabs */}
               <div className="flex border-b border-slate-100">
-                <button 
+                <button
                   onClick={() => setActiveTab('suggestions')}
                   className={cn(
                     "flex-1 py-4 text-sm font-bold transition-all border-b-2",
-                    activeTab === 'suggestions' 
-                      ? "text-indigo-600 border-indigo-600" 
+                    activeTab === 'suggestions'
+                      ? "text-indigo-600 border-indigo-600"
                       : "text-slate-400 border-transparent hover:text-slate-600"
                   )}
                 >
                   Suggestions
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('analytics')}
                   className={cn(
                     "flex-1 py-4 text-sm font-bold transition-all border-b-2",
-                    activeTab === 'analytics' 
-                      ? "text-indigo-600 border-indigo-600" 
+                    activeTab === 'analytics'
+                      ? "text-indigo-600 border-indigo-600"
                       : "text-slate-400 border-transparent hover:text-slate-600"
                   )}
                 >
                   Analytics
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('alternatives')}
                   className={cn(
                     "flex-1 py-4 text-sm font-bold transition-all border-b-2",
-                    activeTab === 'alternatives' 
-                      ? "text-indigo-600 border-indigo-600" 
+                    activeTab === 'alternatives'
+                      ? "text-indigo-600 border-indigo-600"
                       : "text-slate-400 border-transparent hover:text-slate-600"
                   )}
                 >
@@ -410,7 +489,7 @@ export default function App() {
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                 <AnimatePresence mode="wait">
                   {activeTab === 'suggestions' ? (
-                    <motion.div 
+                    <motion.div
                       key="suggestions-tab"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -427,7 +506,7 @@ export default function App() {
                           )}
                         </h2>
                         {result && result.suggestions.length > 1 && (
-                          <button 
+                          <button
                             onClick={applyAllSuggestions}
                             className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
                           >
@@ -473,8 +552,8 @@ export default function App() {
                           animate={{ opacity: 1, y: 0 }}
                           className={cn(
                             "group p-4 rounded-xl border transition-all cursor-pointer",
-                            activeSuggestionId === suggestion.id 
-                              ? "border-indigo-200 bg-indigo-50/30 shadow-sm" 
+                            activeSuggestionId === suggestion.id
+                              ? "border-indigo-200 bg-indigo-50/30 shadow-sm"
                               : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
                           )}
                           onClick={() => setActiveSuggestionId(suggestion.id)}
@@ -487,7 +566,7 @@ export default function App() {
                               {getSuggestionIcon(suggestion.type)}
                               {suggestion.type}
                             </div>
-                            <button 
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 applySuggestion(suggestion);
@@ -509,7 +588,7 @@ export default function App() {
                       ))}
                     </motion.div>
                   ) : activeTab === 'analytics' ? (
-                    <motion.div 
+                    <motion.div
                       key="analytics-tab"
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -588,7 +667,7 @@ export default function App() {
                       )}
                     </motion.div>
                   ) : (
-                    <motion.div 
+                    <motion.div
                       key="alternatives-tab"
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -611,7 +690,7 @@ export default function App() {
                             <p className="text-xs text-slate-400 mt-1">Choose a different style for your entire text.</p>
                           </div>
                           {result.alternativeVersions.map((alt, i) => (
-                            <div 
+                            <div
                               key={i}
                               className="p-4 rounded-xl border border-slate-100 bg-white hover:border-indigo-200 hover:shadow-sm transition-all group"
                             >
@@ -619,7 +698,7 @@ export default function App() {
                                 <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded-md">
                                   {alt.label}
                                 </span>
-                                <button 
+                                <button
                                   onClick={() => applyAlternative(alt.text)}
                                   className="text-xs font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors"
                                 >
@@ -647,7 +726,19 @@ export default function App() {
                     </h3>
                     <div className="flex gap-2">
                       <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"><Share2 className="w-3.5 h-3.5" /></button>
-                      <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"><Download className="w-3.5 h-3.5" /></button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"><Download className="w-3.5 h-3.5" /></button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={exportToPDF} className="cursor-pointer flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-rose-500" /> Export as PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={exportToWord} className="cursor-pointer flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-blue-600" /> Export as Word
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   <p className="text-sm text-slate-600 leading-relaxed italic">
@@ -667,7 +758,7 @@ export default function App() {
             <h2 className="text-3xl font-bold text-slate-900 mb-4">Advanced Writing Intelligence</h2>
             <p className="text-slate-500">Lumina AI uses state-of-the-art language models to provide deep insights into your writing style and impact.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
               {
@@ -721,7 +812,8 @@ export default function App() {
         </div>
       </footer>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
